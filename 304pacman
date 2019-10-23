@@ -1,0 +1,84 @@
+#!/usr/bin/python3
+
+from sys import argv, stderr, exit
+
+# Do not modify this class, his default comportement is necessary for the program
+class   BadArgumentError(Exception):
+    def __init__(self, message, errors = "BadArgumentError"):
+        super().__init__(message)
+        self.errors = errors
+
+# Default object class
+class   Pacman():
+    """ Definition of Make class """
+    pursue = True
+    north = lambda self, y: y - 1
+    south = lambda self, y: y + 1
+    east = lambda self, x: x + 1
+    west = lambda self, x: x - 1
+    def __init__(self, argument):
+        """ Initialise Separation's instance and check little errors """
+        self.c1 = argument[2]
+        self.c2 = argument[3]
+        self.fd = open(argument[1], "r")
+        self.buff = self.fd.read().rstrip().split('\n')
+        if "".join(self.buff).count("P") is not 1 or "".join(self.buff).count("F") is not 1:
+            raise BadArgumentError("Not the good ghost / player's number in the file.")
+        for i in range(len(self.buff)):
+            self.buff[i] = list(self.buff[i].replace('1', self.c1).replace('0', self.c2))
+
+    def checkArround(self, node, loop):
+        x, y = node[0][1], node[0][0]
+        if (self.buff[y + 1][x] is "P" or self.buff[y - 1][x] is "P" or
+            self.buff[y][x - 1] is "P" or self.buff[y][x + 1] is "P"):
+            self.pursue = False
+        elif self.pursue is not False:
+            if self.buff[self.north(y)][x] == self.c2:
+                node[1].append([[self.north(y), x], []])
+                self.buff[self.north(y)][x] = str(loop % 10)
+            if self.buff[y][self.east(x)] == self.c2:
+                node[1].append([[y, self.east(x)], []])
+                self.buff[y][self.east(x)] = str(loop % 10)
+            if self.buff[self.south(y)][x] == self.c2:
+                node[1].append([[self.south(y), x], []])
+                self.buff[self.south(y)][x] = str(loop % 10)
+            if self.buff[y][self.west(x)] == self.c2:
+                node[1].append([[y, self.west(x)], []])
+                self.buff[y][self.west(x)] = str(loop % 10)
+
+    def recurse(self, node, loop, count):
+        [[self.recurse(pos, loop - 1, count) for pos in node[1]] if loop is not 0 else None]
+        self.checkArround(node, count + 1)
+
+    def computeValue(self):
+        """ Calculate all printable value required by printValue method """
+        for y in range(len(self.buff)):
+            x = "".join(self.buff[y]).find("F")
+            if "".join(self.buff[y]).find("F") is not -1:
+                self.pos = {"y": y, "x": x}
+                break
+        self.node = [[self.pos["y"], self.pos["x"]], []]
+        [self.recurse(self.node, loop, loop)
+         if self.pursue is not False else None for loop in range(0, 100000)]
+
+    def printValue(self):
+        """ Print all computed value into the tab """
+        for i in self.buff:
+            print("".join(i))
+
+# Do not put more information in this function, it's must be clearer as possible
+def     main():
+    """ Main function who perform program's core action like arguments resolution """
+    if len(argv) is not 4:
+        raise BadArgumentError("Usage: ./303pacman map c1 c2")
+    obj = Pacman(argv)
+    obj.computeValue()
+    obj.printValue()
+
+# Don't touch at this except if u don't worry of problems
+if __name__ == "__main__":
+    try:
+        main()
+    except BaseException as error:
+        stderr.write(str(type(error).__name__) + ": {}\n".format(error))
+        exit(84)
